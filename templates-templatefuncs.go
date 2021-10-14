@@ -21,6 +21,7 @@ For more info, see https://pkg.go.dev/text/template#hdr-Functions
 package templates
 
 import (
+	"log"
 	"strings"
 	"time"
 )
@@ -49,6 +50,18 @@ func FuncDateReformat(date, format string) (d string) {
 }
 
 //FuncAddInt performs addition.
-func FuncAddInt(x, y int) (z int) {
-	return x + y
+func FuncAddInt(x interface{}, y int) (z int) {
+	switch t := x.(type) {
+	case uint, uint8, uint16, uint32, uint64:
+		return int(x.(uint)) + y
+
+	case int, int8, int16, int32, int64:
+		return x.(int) + y
+
+	default:
+		//we log out here so that user can identify issue since otherwise tracking down
+		//an error like this is very difficult.
+		log.Println("templates.FuncAddInt", "unhandled type", t)
+		return 0
+	}
 }
