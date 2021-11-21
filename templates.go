@@ -306,8 +306,14 @@ func (c *Config) Build() (err error) {
 	//when templates are shown a user can provide Show(w, "", "template name", nil).
 	//Note the template.New("") with the blank template name. This is needed so that we
 	//can add the FuncMap to the template files we are about to parse.
-	t := template.Must(template.New("").Funcs(c.FuncMap).ParseFiles(baseFilePaths...))
-	c.templates[""] = t
+	if len(baseFilePaths) > 0 {
+		t, innerErr := template.New("").Funcs(c.FuncMap).ParseFiles(baseFilePaths...)
+		if innerErr != nil {
+			log.Println("templates.Build", "error parsing files at base path", innerErr)
+			return innerErr
+		}
+		c.templates[""] = t
+	}
 
 	//Build complete paths to each file in each subdirectory and parse the templates in
 	//each after appending the filepaths from the base directory. This is similar to how
@@ -329,6 +335,11 @@ func (c *Config) Build() (err error) {
 			return innerErr
 		}
 
+		//Skip this subdirectory if no template files are in it.
+		if len(subdirFilepaths) == 0 {
+			continue
+		}
+
 		//Add the base file paths to the subdirectory's file for inheritance.
 		subdirFilepaths = append(subdirFilepaths, baseFilePaths...)
 
@@ -339,6 +350,7 @@ func (c *Config) Build() (err error) {
 		//can add the FuncMap to the template files we are about to parse.
 		t, innerErr := template.New("").Funcs(c.FuncMap).ParseFiles(subdirFilepaths...)
 		if innerErr != nil {
+			log.Println("templates.Build", "error parsing files at subdir '"+subDir+"'", innerErr)
 			return innerErr
 		}
 		c.templates[subDir] = t
